@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Watertight Audit · 0901</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.min.js",
+        "three/addons/": "./vendor/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand-mark" aria-hidden="true">WT</div>
+      <div>
+        <h1>Watertight Audit · 0901</h1>
+        <p>500 个随机样本 · 仅按拓扑水密分类 · Part 爆炸预览</p>
+      </div>
+    </div>
+    <div class="summary-strip" aria-label="审计汇总">
+      <div><span>抽样任务</span><strong id="summary-all">—</strong></div>
+      <div class="pass-text"><span>拓扑水密 PASS</span><strong id="summary-pass">—</strong></div>
+      <div class="fail-text"><span>拓扑水密 FAIL</span><strong id="summary-fail">—</strong></div>
+      <div><span>审计口径</span><strong id="summary-verifier">—</strong></div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="catalog-panel">
+      <div class="segmented" role="tablist" aria-label="分类">
+        <button class="category-tab active" data-category="pass" role="tab">
+          PASS <span id="tab-pass-count">—</span>
+        </button>
+        <button class="category-tab" data-category="fail" role="tab">
+          FAIL <span id="tab-fail-count">—</span>
+        </button>
+      </div>
+
+      <label class="field search-field">
+        <span>搜索模型 ID</span>
+        <input id="search-input" type="search" autocomplete="off" placeholder="输入 UUID 或目录…">
+      </label>
+      <label class="field" id="reason-field" hidden>
+        <span>未通过原因</span>
+        <select id="reason-select">
+          <option value="">全部原因</option>
+        </select>
+      </label>
+
+      <div class="catalog-meta">
+        <span id="filtered-count">0 个模型</span>
+        <span id="catalog-position">—</span>
+      </div>
+      <div id="model-list" class="model-list" role="listbox" aria-label="模型列表"></div>
+    </aside>
+
+    <main class="viewer-panel">
+      <div id="viewport" class="viewport">
+        <canvas id="scene-canvas" aria-label="3D 模型视图"></canvas>
+        <div class="viewport-badges">
+          <span id="class-badge" class="badge pass">PASS</span>
+          <span id="part-count-badge" class="badge neutral">— parts</span>
+        </div>
+        <div id="loading-overlay" class="loading-overlay">
+          <div class="spinner"></div>
+          <strong id="loading-title">正在初始化</strong>
+          <span id="loading-detail">读取审计清单…</span>
+          <div class="progress-track"><i id="loading-progress"></i></div>
+        </div>
+        <div id="empty-state" class="empty-state" hidden>
+          <strong>没有匹配的模型</strong>
+          <span>请修改搜索或筛选条件</span>
+        </div>
+        <div class="view-help">左键旋转 · 滚轮缩放 · 右键平移 · 点击 part 选中</div>
+      </div>
+
+      <section class="bang-panel" aria-label="爆炸预览控制">
+        <div class="bang-title">
+          <div>
+            <span class="eyebrow">BANG SIMULATION</span>
+            <strong>顺序保持爆炸预览</strong>
+          </div>
+          <output id="explode-value" for="explode-slider">0%</output>
+        </div>
+        <input id="explode-slider" class="explode-slider" type="range" min="0" max="100" step="1" value="0">
+        <div class="toolbar">
+          <button id="play-button" class="primary-button" type="button">▶ 播放爆炸</button>
+          <button id="reset-button" type="button">复原</button>
+          <button id="fit-button" type="button">适配视图</button>
+          <label class="toggle"><input id="color-toggle" type="checkbox" checked><span></span>Parts 配色</label>
+          <label class="toggle"><input id="wireframe-toggle" type="checkbox"><span></span>线框</label>
+          <label class="toggle"><input id="rotate-toggle" type="checkbox"><span></span>自动旋转</label>
+        </div>
+        <p class="bang-note">浏览器使用正轴球化与单调间距扩张模拟 Bang 布局；只改变显示位置，不修改 GLB。</p>
+      </section>
+    </main>
+
+    <aside class="detail-panel">
+      <div class="model-heading">
+        <span id="detail-category" class="badge pass">PASS</span>
+        <h2 id="model-id">请选择模型</h2>
+        <button id="copy-id-button" class="icon-button" type="button" title="复制模型 ID">复制</button>
+      </div>
+
+      <dl class="metric-grid">
+        <div><dt>审计 Parts</dt><dd id="metric-part-count">—</dd></div>
+        <div><dt>渲染 Mesh</dt><dd id="metric-mesh-count">—</dd></div>
+        <div><dt>所属分组</dt><dd id="metric-unit-count">—</dd></div>
+        <div><dt>0824 阶段</dt><dd id="metric-overlap-pairs">—</dd></div>
+        <div><dt>0827 阶段</dt><dd id="metric-overlap-volume">—</dd></div>
+        <div><dt>总处理用时</dt><dd id="metric-tiny-count">—</dd></div>
+      </dl>
+
+      <section class="reason-section">
+        <div class="section-title"><strong>审计结论</strong></div>
+        <div id="fail-reasons" class="reason-tags"><span class="reason-tag pass-tag">拓扑水密审计通过</span></div>
+      </section>
+
+      <section class="part-section">
+        <div class="section-title">
+          <strong>Parts</strong>
+          <div>
+            <button id="show-all-button" class="tiny-button" type="button">全部显示</button>
+            <button id="clear-selection-button" class="tiny-button" type="button">取消选择</button>
+          </div>
+        </div>
+        <div id="selected-part-card" class="selected-part-card" hidden>
+          <div><span>当前 part</span><strong id="selected-part-name">—</strong></div>
+          <button id="solo-part-button" type="button">单独显示</button>
+          <button id="hide-part-button" type="button">隐藏</button>
+        </div>
+        <div id="part-list" class="part-list"></div>
+      </section>
+
+      <footer class="detail-footer">
+        <button id="previous-button" type="button">← 上一个</button>
+        <button id="next-button" class="primary-button" type="button">下一个 →</button>
+      </footer>
+    </aside>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

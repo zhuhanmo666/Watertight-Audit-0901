@@ -1,0 +1,11 @@
+{
+  "sampleCount": 500,
+  "topologyWatertightModels": 253,
+  "topologyFailModels": 247,
+  "publishedGlbModels": 279,
+  "modelBytes": 287887904,
+  "splitModels": 0,
+  "assemblyFidelityCounts": {
+    "NOT_RECORDED": 279
+  }
+}
